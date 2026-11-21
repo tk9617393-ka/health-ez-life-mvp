@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>健康 Ez Life - 虛擬寵物健身 App MVP</title>
+  <!-- 載入 Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 載入 Google Fonts 繁體中文思源黑體與圓體風格 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <!-- 載入 Font Awesome 圖示 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- 載入 Tone.js 用於合成清脆音效（無外部音訊檔案依賴） -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+  <style>
+    body {
+      font-family: 'Inter', 'Noto Sans TC', sans-serif;
+      background: linear-gradient(135deg, #ECFDF5 0%, #FEF3C7 50%, #FFEDD5 100%);
+      min-height: 100vh;
+    }
+
+    /* 自訂捲軸美化（手機框架內） */
+    .app-scroll::-webkit-scrollbar {
+      width: 5px;
+    }
+    .app-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .app-scroll::-webkit-scrollbar-thumb {
+      background: rgba(16, 185, 129, 0.25);
+      border-radius: 9999px;
+    }
+
+    /* 虛擬寵物動畫效果 */
+    @keyframes petBreathe {
+      0%, 100% { transform: translateY(0) scale(1, 1); }
+      50% { transform: translateY(-4px) scale(1.02, 0.98); }
+    }
+    @keyframes petHappyJump {
+      0%, 100% { transform: translateY(0) scale(1); }
+      25% { transform: translateY(-22px) scale(0.95, 1.08); }
+      50% { transform: translateY(0) scale(1.06, 0.94); }
+      75% { transform: translateY(-12px) scale(0.98, 1.03); }
+    }
+    @keyframes petHungrySway {
+      0%, 100% { transform: rotate(0deg) translateY(0); }
+      25% { transform: rotate(-4deg) translateY(2px); }
+      75% { transform: rotate(4deg) translateY(2px); }
+    }
+    @keyframes petLevelUpSpin {
+      0% { transform: scale(1) rotate(0deg); }
+      30% { transform: scale(1.2) translateY(-25px) rotate(-8deg); }
+      60% { transform: scale(1.25) translateY(-25px) rotate(8deg); }
+      100% { transform: scale(1) translateY(0) rotate(0deg); }
+    }
+    @keyframes floatUpFade {
+      0% { opacity: 1; transform: translateY(0) scale(0.9); }
+      100% { opacity: 0; transform: translateY(-45px) scale(1.15); }
+    }
+
+    .pet-idle {
+      animation: petBreathe 2.8s ease-in-out infinite;
+    }
+    .pet-happy {
+      animation: petHappyJump 0.85s ease-in-out 2;
+    }
+    .pet-hungry {
+      animation: petHungrySway 2.2s ease-in-out infinite;
+    }
+    .pet-levelup {
+      animation: petLevelUpSpin 1.1s ease-in-out;
+    }
+    .floating-xp {
+      animation: floatUpFade 1.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    /* 手機推播通知滑入動畫 */
+    .push-banner {
+      transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s ease;
+    }
+    .push-hidden {
+      transform: translateY(-130%);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .push-visible {
+      transform: translateY(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+  </style>
+</head>
+<body class="flex flex-col lg:flex-row items-center justify-center p-2 sm:p-6 gap-6 lg:gap-10">
+
+  <!-- 左側簡報導覽說明卡（桌機版顯示，方便簡報時對照 MVP 架構） -->
+  <aside class="hidden lg:flex flex-col justify-between w-96 bg-white/85 backdrop-blur-md border border-emerald-100 rounded-3xl p-7 shadow-xl text-slate-800">
+    <div>
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold tracking-wide mb-4">
+        <i class="fa-solid fa-flask"></i> 系統 MVP 實作展示版
+      </div>
+      <h1 class="text-2xl font-black text-slate-900 leading-snug mb-2">
+        健康 Ez Life<br>
+        <span class="text-emerald-600">虛擬寵物健身 App</span>
+      </h1>
+      <p class="text-sm text-slate-600 leading-relaxed mb-6">
+        本原型完整落地「產品五層次表」中界定的 MVP 核心閉環，以最低開發成本驗證「遊戲化陪伴能否提升運動持續性」。
+      </p>
+
+      <!-- MVP 核心模組對照 -->
+      <div class="space-y-3">
+        <div class="p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200/70">
+          <div class="flex items-center gap-2 text-amber-800 font-bold text-sm mb-1">
+            <i class="fa-solid fa-heart text-orange-500"></i> 1. 核心利益（Core Benefit）
+          </div>
+          <p class="text-xs text-slate-600">互動寵物情緒回饋、等級成長與基礎配件解鎖，降低運動枯燥感。</p>
+        </div>
+
+        <div class="p-3.5 rounded-2xl bg-emerald-50/90 border border-emerald-200/70">
+          <div class="flex items-center gap-2 text-emerald-800 font-bold text-sm mb-1">
+            <i class="fa-solid fa-shoe-prints text-emerald-600"></i> 2. 基本產品（Basic Product）
+          </div>
+          <p class="text-xs text-slate-600">每日步數目標、卡路里估算、運動時長紀錄與歷史明細追蹤。</p>
+        </div>
+
+        <div class="p-3.5 rounded-2xl bg-sky-50/90 border border-sky-200/70">
+          <div class="flex items-center gap-2 text-sky-800 font-bold text-sm mb-1">
+            <i class="fa-solid fa-bell text-sky-600"></i> 3. 期望產品（Expected Product）
+          </div>
+          <p class="text-xs text-slate-600">自訂每日提醒時間與手機推播橫幅喚醒測試，點擊直達運動紀錄。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-6 pt-4 border-t border-slate-200/80 flex items-center justify-between text-xs text-slate-500">
+      <span><i class="fa-solid fa-volume-high text-emerald-600 mr-1"></i>支援互動音效與本地存檔</span>
+      <button onclick="resetDemoData()" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-rose-100 hover:text-rose-700 text-slate-600 font-semibold transition">
+        <i class="fa-solid fa-rotate-right mr-1"></i>重置 Demo
+      </button>
+    </div>
+  </aside>
+
+  <!-- 中央 Mobile App 模擬框架 -->
+  <main class="relative w-full max-w-[420px] h-[820px] max-h-[94vh] bg-slate-50 rounded-[44px] shadow-[0_25px_60px_-15px_rgba(15,23,42,0.25)] border-[8px] border-slate-900 overflow-hidden flex flex-col">
+
+    <!-- 手機頂部狀態列（模擬 iOS/Android 狀態欄） -->
+    <div class="bg-emerald-600 text-white px-6 pt-3 pb-1.5 flex items-center justify-between text-xs font-semibold select-none z-20">
+      <span id="clockTime">21:07</span>
+      <div class="w-24 h-4 bg-slate-900 rounded-full"></div>
+      <div class="flex items-center gap-1.5">
+        <i class="fa-solid fa-signal"></i>
+        <i class="fa-solid fa-wifi"></i>
+        <i class="fa-solid fa-battery-three-quarters"></i>
+      </div>
+    </div>
+
+    <!-- 模擬手機推播通知橫幅（Expected Product 期望產品） -->
+    <div id="pushNotificationBanner" onclick="handlePushClick()" class="push-banner push-hidden absolute top-11 left-3 right-3 z-50 bg-white/95 backdrop-blur-md border border-orange-200 rounded-2xl p-3.5 shadow-2xl cursor-pointer hover:bg-orange-50/90">
+      <div class="flex items-start gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-lg shrink-0 shadow">
+          🐾
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-extrabold text-orange-600">健康 Ez Life • 運動提醒</span>
+            <span class="text-[11px] text-slate-400">剛剛</span>
+          </div>
+          <p id="pushBannerText" class="text-xs font-medium text-slate-700 mt-0.5 leading-snug">
+            🐾 你的夥伴在等你一起去運動囉！今天還差 2,500 步達成目標！
+          </p>
+          <span class="inline-block text-[11px] font-bold text-emerald-600 mt-1">點擊立即開始紀錄 →</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- App 品牌標頭 -->
+    <header class="bg-gradient-to-r from-emerald-600 to-teal-500 text-white px-5 pt-2 pb-4 rounded-b-3xl shadow-md z-10">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-xl font-black tracking-tight">健康 Ez Life</span>
+            <span class="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full">MVP v1.0</span>
+          </div>
+          <p id="todayDateDisplay" class="text-xs text-emerald-100 mt-0.5">2026年11月21日 週六</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <!-- 連續運動天數徽章 -->
+          <div class="bg-amber-400/20 border border-amber-300/40 backdrop-blur-sm px-3 py-1.5 rounded-2xl flex items-center gap-1.5" title="連續運動達標天數">
+            <i class="fa-solid fa-fire text-amber-300 text-sm"></i>
+            <div class="leading-none">
+              <span id="streakCount" class="text-sm font-black text-white">3</span>
+              <span class="text-[11px] text-emerald-50">天連續</span>
+            </div>
+          </div>
+          <!-- 手機版重置按鈕 -->
+          <button onclick="resetDemoData()" class="lg:hidden w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white text-xs" title="重置 Demo 資料">
+            <i class="fa-solid fa-rotate-right"></i>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- 可捲動的主要內容區 -->
+    <div id="appScrollContainer" class="app-scroll flex-1 overflow-y-auto px-4 py-4 space-y-4">
+
+      <!-- 1. 虛擬寵物互動主舞台（Core Benefit 核心陪伴與遊戲化回饋） -->
+      <section class="relative bg-gradient-to-b from-amber-50 via-yellow-50/70 to-white border border-amber-200/80 rounded-3xl p-4 shadow-sm overflow-hidden">
+        <!-- 背景裝飾圓點 -->
+        <div class="absolute -top-6 -right-6 w-24 h-24 bg-amber-200/30 rounded-full blur-md pointer-events-none"></div>
+        <div class="absolute -bottom-6 -left-6 w-24 h-24 bg-emerald-200/30 rounded-full blur-md pointer-events-none"></div>
+
+        <!-- 頂部等級與基礎配件解鎖列 -->
+        <div class="flex items-center justify-between mb-2 relative z-10">
+          <div class="flex items-center gap-2">
+            <span id="petLevelBadge" class="px-2.5 py-1 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs font-black shadow-sm">
+              Lv.1
+            </span>
+            <div>
+              <h2 class="text-sm font-extrabold text-slate-800 flex items-center gap-1.5">
+                活力小企鵝「波波」
+                <span id="petMoodTag" class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">精力充沛</span>
+              </h2>
+            </div>
+          </div>
+          <!-- 基礎等級解鎖外觀配件預覽（MVP 基礎成長回饋） -->
+          <div class="flex items-center gap-1 bg-white/90 border border-amber-200 px-2 py-1 rounded-xl text-[11px] font-bold text-slate-600" title="隨等級解鎖基礎運動配件">
+            <span id="petAccessoryIcon">🎽</span>
+            <span id="petAccessoryLabel">新手運動巾</span>
+          </div>
+        </div>
+
+        <!-- 寵物互動對話氣泡 -->
+        <div onclick="interactWithPet()" class="relative z-10 mx-auto max-w-[92%] bg-white border border-amber-200/90 rounded-2xl px-3.5 py-2 text-center shadow-sm cursor-pointer hover:border-orange-300 transition mb-2">
+          <p id="petSpeechBubble" class="text-xs font-semibold text-slate-700 leading-relaxed">
+            「嗨！今天也要一起動一動嗎？點我看看我的活力狀態！」
+          </p>
+          <div class="w-2.5 h-2.5 bg-white border-r border-b border-amber-200/90 rotate-45 mx-auto -mb-3 mt-1"></div>
+        </div>
+
+        <!-- SVG 動態虛擬寵物主角色（點擊互動） -->
+        <div class="relative flex flex-col items-center justify-center my-1">
+          <!-- 浮動 +XP 特效容器 -->
+          <div id="floatingEffectContainer" class="absolute inset-0 pointer-events-none flex items-center justify-center z-20"></div>
+
+          <button id="petAvatarBtn" onclick="interactWithPet()" class="pet-idle focus:outline-none cursor-pointer transition-transform active:scale-95" aria-label="與虛擬寵物波波互動">
+            <!-- 原創可愛小企鵝波波 SVG（含動態配件與表情切換） -->
+            <svg id="petSvg" width="142" height="142" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- 地面陰影 -->
+              <ellipse cx="80" cy="146" rx="44" ry="8" fill="#CBD5E1" fill-opacity="0.55"/>
+
+              <!-- Lv.3 解鎖：金牌皇冠（預設隱藏） -->
+              <g id="accCrown" class="hidden">
+                <path d="M62 24L68 12L80 20L92 12L98 24H62Z" fill="#FBBF24" stroke="#D97706" stroke-width="2" stroke-linejoin="round"/>
+                <circle cx="80" cy="18" r="2.5" fill="#EF4444"/>
+              </g>
+
+              <!-- 左右小翅膀 -->
+              <ellipse cx="34" cy="92" rx="14" ry="26" transform="rotate(18 34 92)" fill="#1E293B"/>
+              <ellipse cx="126" cy="92" rx="14" ry="26" transform="rotate(-18 126 92)" fill="#1E293B"/>
+
+              <!-- 身體外輪廓 -->
+              <path d="M40 84C40 48 56 26 80 26C104 26 120 48 120 84C120 118 106 138 80 138C54 138 40 118 40 84Z" fill="#1E293B"/>
+
+              <!-- 白色肚皮 -->
+              <path d="M51 88C51 62 63 48 80 48C97 48 109 62 109 88C109 114 98 130 80 130C62 130 51 114 51 88Z" fill="#FFFFFF"/>
+
+              <!-- 臉部眼周白區 -->
+              <circle cx="66" cy="56" r="14" fill="#FFFFFF"/>
+              <circle cx="94" cy="56" r="14" fill="#FFFFFF"/>
+
+              <!-- 眼睛：一般狀態 -->
+              <g id="eyesNormal">
+                <circle cx="67" cy="56" r="4.5" fill="#0F172A"/>
+                <circle cx="68.5" cy="54.5" r="1.5" fill="#FFFFFF"/>
+                <circle cx="93" cy="56" r="4.5" fill="#0F172A"/>
+                <circle cx="94.5" cy="54.5" r="1.5" fill="#FFFFFF"/>
+              </g>
+
+              <!-- 眼睛：開心彎彎眼（運動完成/升級時顯示） -->
+              <g id="eyesHappy" class="hidden">
+                <path d="M61 57C63 52 70 52 72 57" stroke="#0F172A" stroke-width="3.2" stroke-linecap="round"/>
+                <path d="M88 57C90 52 97 52 99 57" stroke="#0F172A" stroke-width="3.2" stroke-linecap="round"/>
+              </g>
+
+              <!-- 眼睛：肚子餓/想運動委屈眼 -->
+              <g id="eyesHungry" class="hidden">
+                <path d="M61 54L72 58" stroke="#0F172A" stroke-width="3" stroke-linecap="round"/>
+                <path d="M99 54L88 58" stroke="#0F172A" stroke-width="3" stroke-linecap="round"/>
+                <circle cx="67" cy="59" r="3.5" fill="#0F172A"/>
+                <circle cx="93" cy="59" r="3.5" fill="#0F172A"/>
+              </g>
+
+              <!-- 腮紅 -->
+              <ellipse cx="55" cy="65" rx="5.5" ry="3.2" fill="#FDA4AF" fill-opacity="0.8"/>
+              <ellipse cx="105" cy="65" rx="5.5" ry="3.2" fill="#FDA4AF" fill-opacity="0.8"/>
+
+              <!-- 嘴巴 -->
+              <path id="petBeak" d="M73 65C73 62 87 62 87 65C87 70 80 74 80 74C80 74 73 70 73 65Z" fill="#F97316"/>
+
+              <!-- Lv.1 基礎配件：活力運動頭帶 -->
+              <g id="accHeadband">
+                <path d="M47 41C62 36 98 36 113 41" stroke="#10B981" stroke-width="6" stroke-linecap="round"/>
+                <circle cx="80" cy="37.5" r="4" fill="#FBBF24"/>
+              </g>
+
+              <!-- Lv.2 解鎖：珊瑚橘運動領巾（達 Lv.2 顯示） -->
+              <g id="accScarf" class="hidden">
+                <path d="M52 77C68 83 92 83 108 77" stroke="#F97316" stroke-width="7" stroke-linecap="round"/>
+                <path d="M92 80L98 96L87 93L92 80Z" fill="#EA580C"/>
+              </g>
+
+              <!-- 小腳丫 -->
+              <ellipse cx="64" cy="139" rx="12" ry="6" fill="#F97316"/>
+              <ellipse cx="96" cy="139" rx="12" ry="6" fill="#F97316"/>
+            </svg>
+          </button>
+          <span class="text-[10px] text-slate-400 mt-0.5">點擊波波互動獲得鼓勵</span>
+        </div>
+
+        <!-- 經驗值進度條 (XP Bar) 與活力值 -->
+        <div class="grid grid-cols-2 gap-3 mt-2 pt-2.5 border-t border-amber-200/60">
+          <!-- 經驗值進度 -->
+          <div>
+            <div class="flex justify-between text-[11px] font-bold mb-1">
+              <span class="text-orange-600"><i class="fa-solid fa-star mr-1"></i>經驗值 XP</span>
+              <span id="xpText" class="text-slate-600">60 / 100</span>
+            </div>
+            <div class="w-full h-2.5 bg-amber-100 rounded-full overflow-hidden">
+              <div id="xpBar" class="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full transition-all duration-500" style="width: 60%;"></div>
+            </div>
+          </div>
+
+          <!-- 寵物活力/飽食度 -->
+          <div>
+            <div class="flex justify-between text-[11px] font-bold mb-1">
+              <span class="text-emerald-600"><i class="fa-solid fa-bolt mr-1"></i>寵物活力值</span>
+              <span id="energyText" class="text-slate-600">75%</span>
+            </div>
+            <div class="w-full h-2.5 bg-emerald-100 rounded-full overflow-hidden">
+              <div id="energyBar" class="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full transition-all duration-500" style="width: 75%;"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. 每日運動數據儀表板（Basic Product 基本產品） -->
+      <section aria-label="每日運動數據儀表板">
+        <div class="flex items-center justify-between mb-2 px-1">
+          <h3 class="text-sm font-extrabold text-slate-800 flex items-center gap-1.5">
+            <i class="fa-solid fa-chart-pie text-emerald-600"></i> 今日運動數據儀表板
+          </h3>
+          <span class="text-[11px] font-semibold text-slate-500">目標：8,000 步</span>
+        </div>
+
+        <div class="bg-white border border-slate-200/80 rounded-3xl p-4 shadow-sm space-y-3.5">
+          <!-- 今日步數大進度條卡片 -->
+          <div>
+            <div class="flex items-baseline justify-between mb-1.5">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-sm">
+                  <i class="fa-solid fa-shoe-prints"></i>
+                </div>
+                <div>
+                  <span class="text-xs font-bold text-slate-500 block">今日累積步數</span>
+                  <div class="flex items-baseline gap-1">
+                    <span id="stepsValue" class="text-2xl font-black text-slate-900">5,500</span>
+                    <span class="text-xs font-semibold text-slate-400">/ 8,000 步</span>
+                  </div>
+                </div>
+              </div>
+              <span id="stepsPercentBadge" class="text-xs font-extrabold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">
+                69%
+              </span>
+            </div>
+            <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+              <div id="stepsProgressBar" class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-500" style="width: 68.75%;"></div>
+            </div>
+          </div>
+
+          <!-- 卡路里與累計運動時長雙欄卡片 -->
+          <div class="grid grid-cols-2 gap-3 pt-1">
+            <div class="bg-orange-50/70 border border-orange-100 rounded-2xl p-3 flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl bg-orange-500 text-white flex items-center justify-center text-sm shrink-0 shadow-sm">
+                <i class="fa-solid fa-fire-flame-curved"></i>
+              </div>
+              <div>
+                <span class="text-[11px] font-bold text-slate-500 block">消耗卡路里</span>
+                <span id="caloriesValue" class="text-lg font-black text-slate-900">245</span>
+                <span class="text-[11px] font-semibold text-slate-500">kcal</span>
+              </div>
+            </div>
+
+            <div class="bg-sky-50/70 border border-sky-100 rounded-2xl p-3 flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl bg-sky-500 text-white flex items-center justify-center text-sm shrink-0 shadow-sm">
+                <i class="fa-solid fa-stopwatch"></i>
+              </div>
+              <div>
+                <span class="text-[11px] font-bold text-slate-500 block">運動時長</span>
+                <span id="minutesValue" class="text-lg font-black text-slate-900">40</span>
+                <span class="text-[11px] font-semibold text-slate-500">分鐘</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. 快速運動紀錄與即時計時器（核心閉環輸入端） -->
+      <section id="workoutInputSection" class="bg-white border border-slate-200/80 rounded-3xl p-4 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-extrabold text-slate-800 flex items-center gap-1.5">
+            <i class="fa-solid fa-dumbbell text-orange-500"></i> 紀錄運動餵養波波
+          </h3>
+          <!-- 模式切換 Tabs -->
+          <div class="inline-flex bg-slate-100 p-1 rounded-xl text-xs font-bold">
+            <button id="tabQuickBtn" onclick="switchWorkoutMode('quick')" class="px-2.5 py-1 rounded-lg bg-white text-emerald-700 shadow-sm transition">
+              快速紀錄
+            </button>
+            <button id="tabTimerBtn" onclick="switchWorkoutMode('timer')" class="px-2.5 py-1 rounded-lg text-slate-500 hover:text-slate-800 transition">
+              即時計時
+            </button>
+          </div>
+        </div>
+
+        <!-- 共用：選擇運動項目 -->
+        <div class="mb-3">
+          <label class="text-[11px] font-bold text-slate-500 block mb-1.5">選擇運動項目</label>
+          <div id="sportTypeGrid" class="grid grid-cols-5 gap-1.5">
+            <button type="button" onclick="selectSport('walk')" data-sport="walk" class="sport-btn active-sport flex flex-col items-center justify-center py-2 px-1 rounded-2xl border-2 border-emerald-500 bg-emerald-50 text-emerald-800 transition">
+              <span class="text-base">🚶</span>
+              <span class="text-[11px] font-bold mt-0.5">健走</span>
+            </button>
+            <button type="button" onclick="selectSport('run')" data-sport="run" class="sport-btn flex flex-col items-center justify-center py-2 px-1 rounded-2xl border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 transition">
+              <span class="text-base">🏃</span>
+              <span class="text-[11px] font-bold mt-0.5">慢跑</span>
+            </button>
+            <button type="button" onclick="selectSport('gym')" data-sport="gym" class="sport-btn flex flex-col items-center justify-center py-2 px-1 rounded-2xl border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 transition">
+              <span class="text-base">🏋️</span>
+              <span class="text-[11px] font-bold mt-0.5">重訓</span>
+            </button>
+            <button type="button" onclick="selectSport('yoga')" data-sport="yoga" class="sport-btn flex flex-col items-center justify-center py-2 px-1 rounded-2xl border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 transition">
+              <span class="text-base">🧘</span>
+              <span class="text-[11px] font-bold mt-0.5">瑜珈</span>
+            </button>
+            <button type="button" onclick="selectSport('bike')" data-sport="bike" class="sport-btn flex flex-col items-center justify-center py-2 px-1 rounded-2xl border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 transition">
+              <span class="text-base">🚴</span>
+              <span class="text-[11px] font-bold mt-0.5">單車</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 模式 A：一鍵快速紀錄 -->
+        <div id="quickModePanel" class="space-y-3">
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label for="inputMinutes" class="text-[11px] font-bold text-slate-500 block mb-1">運動時長（分鐘）</label>
+              <div class="relative">
+                <input id="inputMinutes" type="number" min="1" max="300" value="20" oninput="syncQuickEstimate('minutes')" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-extrabold text-slate-800 focus:outline-none focus:border-emerald-500">
+                <span class="absolute right-3 top-2.5 text-xs text-slate-400 font-bold">分</span>
+              </div>
+            </div>
+            <div>
+              <label for="inputSteps" class="text-[11px] font-bold text-slate-500 block mb-1">換算步數（可微調）</label>
+              <div class="relative">
+                <input id="inputSteps" type="number" min="0" max="50000" value="2000" oninput="syncQuickEstimate('steps')" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-extrabold text-slate-800 focus:outline-none focus:border-emerald-500">
+                <span class="absolute right-3 top-2.5 text-xs text-slate-400 font-bold">步</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 即時估算預覽條 -->
+          <div class="flex items-center justify-between bg-amber-50/80 border border-amber-200/70 rounded-2xl px-3.5 py-2 text-xs">
+            <span class="text-slate-600 font-medium">預估消耗：<strong id="estCaloriesPreview" class="text-orange-600 font-black">90</strong> kcal</span>
+            <span class="text-slate-600 font-medium">寵物獎勵：<strong id="estXpPreview" class="text-emerald-600 font-black">+40 XP</strong></span>
+          </div>
+
+          <button onclick="submitQuickWorkout()" class="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 active:scale-[0.99] text-white font-extrabold text-sm shadow-md shadow-emerald-200 transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-check-circle"></i> 完成紀錄並餵養波波
+          </button>
+        </div>
+
+        <!-- 模式 B：即時運動計時模擬器（方便簡報 Demo 展示） -->
+        <div id="timerModePanel" class="hidden space-y-3">
+          <div class="bg-slate-900 text-white rounded-2xl p-4 text-center relative overflow-hidden">
+            <span id="timerStatusLabel" class="inline-block text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 mb-1">
+              準備就緒
+            </span>
+            <div id="timerClockDisplay" class="text-3xl font-black tracking-wider font-mono my-1">
+              00:00
+            </div>
+            <div class="flex justify-center gap-4 text-xs text-slate-300 mt-1">
+              <span>累計：<strong id="timerSimMinutes" class="text-white">0</strong> 分鐘</span>
+              <span>預估：<strong id="timerSimCalories" class="text-amber-400">0</strong> kcal</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <button id="timerToggleBtn" onclick="toggleTimer()" class="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-play"></i> 開始運動
+            </button>
+            <button onclick="fastForwardTimer()" class="py-2.5 px-3 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs transition flex items-center justify-center gap-1.5" title="簡報現場演示專用快轉鍵">
+              <i class="fa-solid fa-forward-fast"></i> 加速模擬 (+5分)
+            </button>
+          </div>
+
+          <button onclick="finishTimerWorkout()" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-extrabold text-xs shadow-sm transition flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-flag-checkered"></i> 結束運動並結算成果
+          </button>
+        </div>
+      </section>
+
+      <!-- 4. 運動提醒通知設定與模擬（Expected Product 期望產品） -->
+      <section class="bg-white border border-slate-200/80 rounded-3xl p-4 shadow-sm">
+        <div class="flex items-center justify-between mb-2.5">
+          <h3 class="text-sm font-extrabold text-slate-800 flex items-center gap-1.5">
+            <i class="fa-solid fa-bell text-sky-500"></i> 每日運動提醒（期望產品）
+          </h3>
+          <!-- 開關 Toggle -->
+          <label class="inline-flex items-center cursor-pointer">
+            <input id="reminderToggle" type="checkbox" checked onchange="saveReminderSettings()" class="sr-only peer">
+            <div class="relative w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+          </label>
+        </div>
+
+        <div class="flex items-center justify-between gap-2 bg-slate-50 p-2.5 rounded-2xl border border-slate-100">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-slate-600">提醒時間：</span>
+            <input id="reminderTimeInput" type="time" value="19:30" onchange="saveReminderSettings()" class="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-extrabold text-slate-800 focus:outline-none focus:border-sky-500">
+          </div>
+          <button onclick="triggerPushNotification()" class="px-3 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-600 active:scale-95 text-white text-xs font-bold shadow-sm transition flex items-center gap-1">
+            <i class="fa-solid fa-paper-plane"></i> 測試推播通知
+          </button>
+        </div>
+      </section>
+
+      <!-- 5. 近期運動歷史紀錄（核心閉環追蹤） -->
+      <section class="pb-4">
+        <div class="flex items-center justify-between mb-2 px-1">
+          <h3 class="text-sm font-extrabold text-slate-800 flex items-center gap-1.5">
+            <i class="fa-solid fa-clock-rotate-left text-slate-500"></i> 近期運動紀錄明細
+          </h3>
+          <span id="historyCountBadge" class="text-[11px] font-bold text-slate-400">共 2 筆</span>
+        </div>
+
+        <div id="workoutHistoryList" class="space-y-2">
+          <!-- 由 JavaScript 動態渲染歷史紀錄卡片 -->
+        </div>
+      </section>
+
+    </div>
+
+    <!-- 底部提示 Toast（取代禁止使用的 alert()） -->
+    <div id="toastMessage" class="pointer-events-none opacity-0 transition-opacity duration-300 absolute bottom-5 left-1/2 -translate-x-1/2 z-40 bg-slate-900/90 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-lg whitespace-nowrap">
+      已更新運動紀錄！
+    </div>
+
+    <!-- 升級慶祝 Modal 彈窗（達升級門檻時觸發） -->
+    <div id="levelUpModal" class="hidden absolute inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-6">
+      <div class="bg-white rounded-3xl p-6 text-center max-w-xs w-full shadow-2xl border-2 border-amber-300 transform transition-all">
+        <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-white text-3xl flex items-center justify-center shadow-lg mb-3">
+          🎉
+        </div>
+        <span class="text-xs font-extrabold text-orange-500 tracking-wider uppercase">LEVEL UP!</span>
+        <h3 id="modalNewLevelTitle" class="text-2xl font-black text-slate-900 mt-1">波波升到 Lv.2 啦！</h3>
+        <p id="modalUnlockDesc" class="text-xs text-slate-600 mt-2 leading-relaxed">
+          太棒了！持續規律運動讓波波充滿活力，並解鎖了新外觀配件：「珊瑚橘運動領巾」！
+        </p>
+        <button onclick="closeLevelUpModal()" class="mt-5 w-full py-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-extrabold text-sm shadow-md hover:from-emerald-600 hover:to-teal-600 transition">
+          太棒了，繼續保持！
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    // ==========================================
+    // 1. 系統狀態與運動參數定義 (MVP 資料模型)
+    // ==========================================
+    const STORAGE_KEY = 'health_ez_life_mvp_v1';
+    const DAILY_STEP_GOAL = 8000;
+
+    // 運動類型對照表：每分鐘消耗卡路里與換算步數
+    const SPORT_CONFIG = {
+      walk: { name: '健走', icon: '🚶', calPerMin: 4.5, stepsPerMin: 100 },
+      run:  { name: '慢跑', icon: '🏃', calPerMin: 9.5, stepsPerMin: 160 },
+      gym:  { name: '重訓', icon: '🏋️', calPerMin: 6.5, stepsPerMin: 30 },
+      yoga: { name: '瑜珈', icon: '🧘', calPerMin: 3.5, stepsPerMin: 15 },
+      bike: { name: '單車', icon: '🚴', calPerMin: 7.5, stepsPerMin: 80 }
+    };
+
+    // 寵物等級對應基礎外觀配件（對應 MVP 基礎成長回饋）
+    const LEVEL_ACCESSORIES = {
+      1: { icon: '🎽', label: '活力運動頭帶', desc: '基礎新手裝備，陪你踏出第一步！' },
+      2: { icon: '🧣', label: '珊瑚橘運動領巾', desc: 'Lv.2 解鎖！象徵養成規律運動好習慣！' },
+      3: { icon: '👑', label: '健康達人金牌冠', desc: 'Lv.3 解鎖！你是真正的運動毅力王者！' }
+    };
+
+    // 寵物鼓勵語錄庫
+    const PET_QUOTES = {
+      energetic: [
+        '「今天狀態超棒！再動一下我們就能一起升級囉！」',
+        '「有你的陪伴，運動一點都不無聊～繼續加油！」',
+        '「一步一腳印，波波感覺自己越來越強壯了！」'
+      ],
+      hungry: [
+        '「肚子咕嚕咕嚕叫了...好想跟你一起去流流汗喔！」',
+        '「今天還差一點步數就達標了，陪我走走好嗎？」',
+        '「別讓沙發把你黏住了！起來伸展 10 分鐘吧！」'
+      ]
+    };
+
+    // 預設初始 Demo 狀態
+    function getDefaultState() {
+      return {
+        level: 1,
+        xp: 60,
+        xpToNext: 100,
+        energy: 75,
+        streak: 3,
+        steps: 5500,
+        calories: 245,
+        minutes: 40,
+        reminderEnabled: true,
+        reminderTime: '19:30',
+        history: [
+          {
+            id: 101,
+            sport: 'walk',
+            minutes: 30,
+            steps: 3500,
+            calories: 135,
+            xp: 60,
+            timestamp: '今天 08:30'
+          },
+          {
+            id: 102,
+            sport: 'yoga',
+            minutes: 10,
+            steps: 2000,
+            calories: 110,
+            xp: 25,
+            timestamp: '昨天 20:15'
+          }
+        ]
+      };
+    }
+
+    let appState = loadState();
+    let currentSport = 'walk';
+    let timerInterval = null;
+    let timerSeconds = 0;
+    let isTimerRunning = false;
+    let pushTimeout = null;
+
+    // ==========================================
+    // 2. 本地存檔管理 (localStorage)
+    // ==========================================
+    function loadState() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          return JSON.parse(saved);
+        }
+      } catch (e) {
+        console.warn('讀取本地存檔失敗，使用預設資料', e);
+      }
+      return getDefaultState();
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+      } catch (e) {
+        console.warn('儲存本地資料失敗', e);
+      }
+    }
+
+    function resetDemoData() {
+      stopTimer();
+      timerSeconds = 0;
+      updateTimerDisplay();
+      appState = getDefaultState();
+      saveState();
+      renderAll();
+      showToast('🔄 已重置為初始 Demo 狀態！');
+    }
+
+    // ==========================================
+    // 3. 音效合成器 (Tone.js - 無需外部檔案)
+    // ==========================================
+    function playSound(type) {
+      try {
+        if (typeof Tone === 'undefined') return;
+        if (Tone.context.state !== 'running') {
+          Tone.start();
+        }
+        const synth = new Tone.Synth({
+          oscillator: { type: 'triangle' },
+          envelope: { attack: 0.01, decay: 0.15, sustain: 0.1, release: 0.3 }
+        }).toDestination();
+
+        const now = Tone.now();
+        if (type === 'pet') {
+          synth.triggerAttackRelease('C5', '16n', now);
+          synth.triggerAttackRelease('E5', '16n', now + 0.08);
+        } else if (type === 'complete') {
+          synth.triggerAttackRelease('C5', '16n', now);
+          synth.triggerAttackRelease('E5', '16n', now + 0.09);
+          synth.triggerAttackRelease('G5', '8n', now + 0.18);
+        } else if (type === 'levelup') {
+          synth.triggerAttackRelease('C5', '16n', now);
+          synth.triggerAttackRelease('E5', '16n', now + 0.1);
+          synth.triggerAttackRelease('G5', '16n', now + 0.2);
+          synth.triggerAttackRelease('C6', '4n', now + 0.3);
+        } else if (type === 'notify') {
+          synth.triggerAttackRelease('A5', '16n', now);
+          synth.triggerAttackRelease('E5', '16n', now + 0.12);
+        }
+      } catch (err) {
+        // 忽略瀏覽器自動播放限制錯誤
+      }
+    }
+
+    // ==========================================
+    // 4. 介面渲染與狀態更新
+    // ==========================================
+    function renderAll() {
+      // 更新日期與頂部狀態
+      const now = new Date();
+      const days = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+      document.getElementById('todayDateDisplay').textContent =
+        `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ${days[now.getDay()]}`;
+      document.getElementById('streakCount').textContent = appState.streak;
+
+      // 更新寵物等級、經驗值與活力值
+      document.getElementById('petLevelBadge').textContent = `Lv.${appState.level}`;
+      document.getElementById('xpText').textContent = `${appState.xp} / ${appState.xpToNext}`;
+      const xpPct = Math.min(100, Math.round((appState.xp / appState.xpToNext) * 100));
+      document.getElementById('xpBar').style.width = `${xpPct}%`;
+
+      document.getElementById('energyText').textContent = `${appState.energy}%`;
+      document.getElementById('energyBar').style.width = `${appState.energy}%`;
+
+      // 更新等級解鎖配件與 SVG 外觀
+      const accLevel = Math.min(3, appState.level);
+      const accInfo = LEVEL_ACCESSORIES[accLevel];
+      document.getElementById('petAccessoryIcon').textContent = accInfo.icon;
+      document.getElementById('petAccessoryLabel').textContent = accInfo.label;
+
+      document.getElementById('accScarf').classList.toggle('hidden', appState.level < 2);
+      document.getElementById('accCrown').classList.toggle('hidden', appState.level < 3);
+
+      // 更新寵物情緒狀態（步數低於 50% 顯示想運動提醒，否則精力充沛）
+      const moodTag = document.getElementById('petMoodTag');
+      const petBtn = document.getElementById('petAvatarBtn');
+      const isHungry = appState.steps < DAILY_STEP_GOAL * 0.5 && appState.energy < 60;
+
+      if (isHungry) {
+        moodTag.textContent = '想出門運動';
+        moodTag.className = 'text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800';
+        setPetExpression('hungry');
+        if (!petBtn.classList.contains('pet-happy')) {
+          petBtn.className = 'pet-hungry focus:outline-none cursor-pointer transition-transform active:scale-95';
+        }
+      } else {
+        moodTag.textContent = '精力充沛';
+        moodTag.className = 'text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700';
+        if (!petBtn.classList.contains('pet-happy')) {
+          setPetExpression('normal');
+          petBtn.className = 'pet-idle focus:outline-none cursor-pointer transition-transform active:scale-95';
+        }
+      }
+
+      // 更新每日運動數據儀表板
+      document.getElementById('stepsValue').textContent = appState.steps.toLocaleString();
+      const stepPct = Math.min(100, Math.round((appState.steps / DAILY_STEP_GOAL) * 100));
+      document.getElementById('stepsPercentBadge').textContent = `${stepPct}%`;
+      document.getElementById('stepsProgressBar').style.width = `${stepPct}%`;
+
+      if (appState.steps >= DAILY_STEP_GOAL) {
+        document.getElementById('stepsPercentBadge').className =
+          'text-xs font-extrabold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800';
+        document.getElementById('stepsPercentBadge').textContent = '🎉 已達標!';
+      } else {
+        document.getElementById('stepsPercentBadge').className =
+          'text-xs font-extrabold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700';
+      }
+
+      document.getElementById('caloriesValue').textContent = appState.calories.toLocaleString();
+      document.getElementById('minutesValue').textContent = appState.minutes.toLocaleString();
+
+      // 更新提醒設定欄位
+      document.getElementById('reminderToggle').checked = appState.reminderEnabled;
+      document.getElementById('reminderTimeInput').value = appState.reminderTime;
+
+      // 更新近期運動歷史列表
+      renderHistoryList();
+    }
+
+    function setPetExpression(expr) {
+      document.getElementById('eyesNormal').classList.toggle('hidden', expr !== 'normal');
+      document.getElementById('eyesHappy').classList.toggle('hidden', expr !== 'happy');
+      document.getElementById('eyesHungry').classList.toggle('hidden', expr !== 'hungry');
+    }
+
+    function renderHistoryList() {
+      const listEl = document.getElementById('workoutHistoryList');
+      document.getElementById('historyCountBadge').textContent = `共 ${appState.history.length} 筆`;
+
+      if (appState.history.length === 0) {
+        listEl.innerHTML = `
+          <div class="bg-white border border-dashed border-slate-200 rounded-2xl p-6 text-center text-xs text-slate-400">
+            尚無運動紀錄，快到上方新增第一筆運動吧！
+          </div>`;
+        return;
+      }
+
+      listEl.innerHTML = appState.history.map(item => {
+        const cfg = SPORT_CONFIG[item.sport] || SPORT_CONFIG.walk;
+        return `
+          <div class="bg-white border border-slate-200/75 rounded-2xl p-3 flex items-center justify-between shadow-2xs">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-xl">
+                ${cfg.icon}
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-extrabold text-slate-800">${cfg.name} ${item.minutes} 分鐘</span>
+                  <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">+${item.xp} XP</span>
+                </div>
+                <p class="text-[11px] text-slate-500 mt-0.5">
+                  ${item.steps > 0 ? `${item.steps.toLocaleString()} 步 • ` : ''}${item.calories} kcal • ${item.timestamp}
+                </p>
+              </div>
+            </div>
+            <i class="fa-solid fa-circle-check text-emerald-500 text-sm"></i>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ==========================================
+    // 5. 虛擬寵物互動與獎勵結算邏輯
+    // ==========================================
+    function interactWithPet() {
+      playSound('pet');
+      const petBtn = document.getElementById('petAvatarBtn');
+      petBtn.classList.remove('pet-idle', 'pet-hungry', 'pet-happy');
+      void petBtn.offsetWidth; // 觸發重繪以重啟動畫
+      petBtn.classList.add('pet-happy');
+      setPetExpression('happy');
+
+      const pool = appState.steps >= DAILY_STEP_GOAL * 0.5 ? PET_QUOTES.energetic : PET_QUOTES.hungry;
+      const randomQuote = pool[Math.floor(Math.random() * pool.length)];
+      document.getElementById('petSpeechBubble').textContent = randomQuote;
+
+      setTimeout(() => {
+        petBtn.classList.remove('pet-happy');
+        renderAll();
+      }, 1700);
+    }
+
+    function spawnFloatingXp(xpAmount) {
+      const container = document.getElementById('floatingEffectContainer');
+      const badge = document.createElement('div');
+      badge.className = 'floating-xp px-3 py-1 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white font-black text-sm shadow-md';
+      badge.textContent = `+${xpAmount} XP 活力 UP!`;
+      container.appendChild(badge);
+      setTimeout(() => badge.remove(), 1450);
+    }
+
+    function recordWorkoutSession(sportKey, minutes, steps, calories) {
+      // 計算獲得的寵物經驗值（基礎 15 XP + 每分鐘 1.5 XP）
+      const gainedXp = Math.max(15, Math.round(10 + minutes * 1.5));
+
+      // 更新今日數據
+      const wasGoalReached = appState.steps >= DAILY_STEP_GOAL;
+      appState.minutes += minutes;
+      appState.steps += steps;
+      appState.calories += calories;
+      appState.energy = Math.min(100, appState.energy + Math.max(10, Math.round(minutes * 0.8)));
+
+      // 若本次剛好達成每日 8,000 步目標，連續天數 +1
+      if (!wasGoalReached && appState.steps >= DAILY_STEP_GOAL) {
+        appState.streak += 1;
+      }
+
+      // 經驗值累加與升級判斷
+      appState.xp += gainedXp;
+      let leveledUp = false;
+      while (appState.xp >= appState.xpToNext) {
+        appState.xp -= appState.xpToNext;
+        appState.level += 1;
+        appState.xpToNext = Math.round(appState.xpToNext * 1.3);
+        leveledUp = true;
+      }
+
+      // 寫入歷史紀錄
+      const now = new Date();
+      const timeStr = `今天 ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      appState.history.unshift({
+        id: Date.now(),
+        sport: sportKey,
+        minutes,
+        steps,
+        calories,
+        xp: gainedXp,
+        timestamp: timeStr
+      });
+
+      saveState();
+      renderAll();
+
+      // 觸發視覺與音效回饋
+      spawnFloatingXp(gainedXp);
+      const petBtn = document.getElementById('petAvatarBtn');
+      petBtn.classList.remove('pet-idle', 'pet-hungry', 'pet-happy', 'pet-levelup');
+      void petBtn.offsetWidth;
+
+      if (leveledUp) {
+        playSound('levelup');
+        petBtn.classList.add('pet-levelup');
+        setPetExpression('happy');
+        document.getElementById('petSpeechBubble').textContent =
+          `「太神啦！！我們一起升到 Lv.${appState.level} 了！謝謝你帶我運動！」`;
+        showLevelUpModal(appState.level);
+      } else {
+        playSound('complete');
+        petBtn.classList.add('pet-happy');
+        setPetExpression('happy');
+        const cfg = SPORT_CONFIG[sportKey];
+        document.getElementById('petSpeechBubble').textContent =
+          `「好耶！剛完成了 ${minutes} 分鐘${cfg.name}，波波獲得了 +${gainedXp} XP！」`;
+        showToast(`✅ 已紀錄${cfg.name} ${minutes} 分鐘（+${gainedXp} XP）`);
+      }
+
+      setTimeout(() => {
+        petBtn.classList.remove('pet-happy', 'pet-levelup');
+        renderAll();
+      }, 1800);
+    }
+
+    function showLevelUpModal(newLevel) {
+      const accLevel = Math.min(3, newLevel);
+      const acc = LEVEL_ACCESSORIES[accLevel];
+      document.getElementById('modalNewLevelTitle').textContent = `波波升到 Lv.${newLevel} 啦！`;
+      document.getElementById('modalUnlockDesc').textContent =
+        newLevel <= 3
+          ? `持續規律運動讓波波充滿活力，成功解鎖新配件：「${acc.icon} ${acc.label}」！`
+          : `你與波波的運動默契無人能敵！繼續保持每日健康好習慣吧！`;
+      document.getElementById('levelUpModal').classList.remove('hidden');
+    }
+
+    function closeLevelUpModal() {
+      document.getElementById('levelUpModal').classList.add('hidden');
+    }
+
+    // ==========================================
+    // 6. 運動輸入區互動（快速紀錄 & 即時計時模擬）
+    // ==========================================
+    function switchWorkoutMode(mode) {
+      const isQuick = mode === 'quick';
+      document.getElementById('quickModePanel').classList.toggle('hidden', !isQuick);
+      document.getElementById('timerModePanel').classList.toggle('hidden', isQuick);
+
+      document.getElementById('tabQuickBtn').className = isQuick
+        ? 'px-2.5 py-1 rounded-lg bg-white text-emerald-700 shadow-sm transition'
+        : 'px-2.5 py-1 rounded-lg text-slate-500 hover:text-slate-800 transition';
+
+      document.getElementById('tabTimerBtn').className = !isQuick
+        ? 'px-2.5 py-1 rounded-lg bg-white text-emerald-700 shadow-sm transition'
+        : 'px-2.5 py-1 rounded-lg text-slate-500 hover:text-slate-800 transition';
+    }
+
+    function selectSport(sportKey) {
+      currentSport = sportKey;
+      document.querySelectorAll('.sport-btn').forEach(btn => {
+        const isSelected = btn.dataset.sport === sportKey;
+        btn.className = isSelected
+          ? 'sport-btn active-sport flex flex-col items-center justify-center py-2 px-1 rounded-2xl border-2 border-emerald-500 bg-emerald-50 text-emerald-800 transition'
+          : 'sport-btn flex flex-col items-center justify-center py-2 px-1 rounded-2xl border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 transition';
+      });
+      syncQuickEstimate('minutes');
+      updateTimerDisplay();
+    }
+
+    function syncQuickEstimate(changedField) {
+      const cfg = SPORT_CONFIG[currentSport];
+      const minInput = document.getElementById('inputMinutes');
+      const stepsInput = document.getElementById('inputSteps');
+
+      let mins = Math.max(1, parseInt(minInput.value, 10) || 1);
+      if (changedField === 'minutes') {
+        stepsInput.value = mins * cfg.stepsPerMin;
+      }
+      const steps = Math.max(0, parseInt(stepsInput.value, 10) || 0);
+      const estCal = Math.round(mins * cfg.calPerMin);
+      const estXp = Math.max(15, Math.round(10 + mins * 1.5));
+
+      document.getElementById('estCaloriesPreview').textContent = estCal;
+      document.getElementById('estXpPreview').textContent = `+${estXp} XP`;
+    }
+
+    function submitQuickWorkout() {
+      const mins = Math.max(1, parseInt(document.getElementById('inputMinutes').value, 10) || 15);
+      const steps = Math.max(0, parseInt(document.getElementById('inputSteps').value, 10) || 0);
+      const cfg = SPORT_CONFIG[currentSport];
+      const cals = Math.round(mins * cfg.calPerMin);
+
+      recordWorkoutSession(currentSport, mins, steps, cals);
+    }
+
+    // 即時計時器控制邏輯
+    function toggleTimer() {
+      if (isTimerRunning) {
+        stopTimer();
+      } else {
+        isTimerRunning = true;
+        document.getElementById('timerToggleBtn').innerHTML = '<i class="fa-solid fa-pause"></i> 暫停計時';
+        document.getElementById('timerToggleBtn').className =
+          'py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs transition flex items-center justify-center gap-1.5';
+        document.getElementById('timerStatusLabel').textContent = '🔥 運動計時中...';
+
+        timerInterval = setInterval(() => {
+          timerSeconds += 1;
+          updateTimerDisplay();
+        }, 1000);
+      }
+    }
+
+    function stopTimer() {
+      isTimerRunning = false;
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+      document.getElementById('timerToggleBtn').innerHTML = '<i class="fa-solid fa-play"></i> 開始運動';
+      document.getElementById('timerToggleBtn').className =
+        'py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5';
+      document.getElementById('timerStatusLabel').textContent = timerSeconds > 0 ? '已暫停' : '準備就緒';
+    }
+
+    function fastForwardTimer() {
+      timerSeconds += 300; // 增加 5 分鐘 (300 秒)
+      updateTimerDisplay();
+      showToast('⏩ Demo 快轉：已模擬運動 +5 分鐘！');
+    }
+
+    function updateTimerDisplay() {
+      const mins = Math.floor(timerSeconds / 60);
+      const secs = timerSeconds % 60;
+      document.getElementById('timerClockDisplay').textContent =
+        `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+      const effectiveMins = Math.max(0, Math.round(timerSeconds / 60));
+      const cfg = SPORT_CONFIG[currentSport];
+      document.getElementById('timerSimMinutes').textContent = effectiveMins;
+      document.getElementById('timerSimCalories').textContent = Math.round(effectiveMins * cfg.calPerMin);
+    }
+
+    function finishTimerWorkout() {
+      stopTimer();
+      // 若不足 1 分鐘但有啟動計時，Demo 預設算作 5 分鐘方便體驗
+      const mins = timerSeconds >= 60 ? Math.round(timerSeconds / 60) : 5;
+      const cfg = SPORT_CONFIG[currentSport];
+      const steps = mins * cfg.stepsPerMin;
+      const cals = Math.round(mins * cfg.calPerMin);
+
+      timerSeconds = 0;
+      updateTimerDisplay();
+      recordWorkoutSession(currentSport, mins, steps, cals);
+    }
+
+    // ==========================================
+    // 7. 運動提醒通知模擬 (Expected Product)
+    // ==========================================
+    function saveReminderSettings() {
+      appState.reminderEnabled = document.getElementById('reminderToggle').checked;
+      appState.reminderTime = document.getElementById('reminderTimeInput').value || '19:30';
+      saveState();
+      showToast(
+        appState.reminderEnabled
+          ? `🔔 已設定每日 ${appState.reminderTime} 運動提醒`
+          : '🔕 已暫停每日運動提醒'
+      );
+    }
+
+    function triggerPushNotification() {
+      playSound('notify');
+      const remainingSteps = Math.max(0, DAILY_STEP_GOAL - appState.steps);
+      const bannerText = remainingSteps > 0
+        ? `🐾 波波在等你一起去運動囉！今天還差 ${remainingSteps.toLocaleString()} 步達成目標！`
+        : `🎉 太棒了！你今天已達成 8,000 步目標，快來看看波波開心的樣子！`;
+
+      document.getElementById('pushBannerText').textContent = bannerText;
+      const banner = document.getElementById('pushNotificationBanner');
+      banner.classList.remove('push-hidden');
+      banner.classList.add('push-visible');
+
+      if (pushTimeout) clearTimeout(pushTimeout);
+      pushTimeout = setTimeout(() => {
+        banner.classList.remove('push-visible');
+        banner.classList.add('push-hidden');
+      }, 5500);
+    }
+
+    function handlePushClick() {
+      const banner = document.getElementById('pushNotificationBanner');
+      banner.classList.remove('push-visible');
+      banner.classList.add('push-hidden');
+
+      // 平滑捲動到紀錄運動區塊
+      const target = document.getElementById('workoutInputSection');
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      showToast('💪 已跳轉至運動紀錄區，開始運動吧！');
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toastMessage');
+      toast.textContent = msg;
+      toast.classList.remove('opacity-0');
+      toast.classList.add('opacity-100');
+      setTimeout(() => {
+        toast.classList.remove('opacity-100');
+        toast.classList.add('opacity-0');
+      }, 2400);
+    }
+
+    // ==========================================
+    // 8. 頁面載入初始化
+    // ==========================================
+    window.addEventListener('DOMContentLoaded', () => {
+      syncQuickEstimate('minutes');
+      renderAll();
+
+      // 更新頂部手機狀態列即時時間
+      setInterval(() => {
+        const d = new Date();
+        document.getElementById('clockTime').textContent =
+          `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      }, 15000);
+    });
+  </script>
+</body>
+</html>
